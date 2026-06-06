@@ -1,0 +1,314 @@
+/* ==========================================================
+   JIINEVA GLOBAL STYLES
+   Requires: jiineva-tokens.css loaded first
+   ========================================================== */
+
+/* ── PAGE CONTAINER ──────────────────────────────────────── */
+
+.jiineva-page-width {
+  max-width: var(--jiineva-content-width);
+  margin-inline: auto;
+  padding-inline: var(--jiineva-section-x);
+}
+
+.jiineva-section {
+  padding-block: var(--jiineva-section-y);
+}
+
+/* ── TYPOGRAPHY UTILITIES ────────────────────────────────── */
+
+.jiineva-heading {
+  font-family: var(--jiineva-font-heading);
+  font-weight: var(--jiineva-weight-heading);
+  line-height: var(--jiineva-leading-tight);
+  color: var(--jiineva-text);
+}
+
+.jiineva-eyebrow {
+  font-family: var(--jiineva-font-body);
+  font-size: var(--jiineva-text-xs);
+  font-weight: var(--jiineva-weight-semibold);
+  letter-spacing: var(--jiineva-tracking-widest);
+  text-transform: uppercase;
+  color: var(--jiineva-text-muted);
+}
+
+.jiineva-label {
+  font-size: var(--jiineva-text-xs);
+  font-weight: var(--jiineva-weight-medium);
+  letter-spacing: var(--jiineva-tracking-wider);
+  text-transform: uppercase;
+}
+
+/* ── BUTTONS ─────────────────────────────────────────────── */
+
+.jiineva-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jiineva-space-2);
+  height: var(--jiineva-btn-h);
+  padding-inline: var(--jiineva-btn-px);
+  font-family: var(--jiineva-font-body);
+  font-size: var(--jiineva-btn-size);
+  font-weight: var(--jiineva-btn-weight);
+  letter-spacing: var(--jiineva-btn-tracking);
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: var(--jiineva-radius-btn);
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    background-color var(--jiineva-transition-fast),
+    border-color var(--jiineva-transition-fast),
+    color var(--jiineva-transition-fast),
+    opacity var(--jiineva-transition-fast);
+}
+
+.jiineva-btn:focus-visible {
+  outline: 2px solid var(--jiineva-border-focus);
+  outline-offset: 3px;
+}
+
+.jiineva-btn:disabled,
+.jiineva-btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Primary — solid black */
+.jiineva-btn--primary {
+  background-color: var(--jiineva-black);
+  border-color: var(--jiineva-black);
+  color: var(--jiineva-white);
+}
+.jiineva-btn--primary:hover {
+  background-color: var(--jiineva-gray-800);
+  border-color: var(--jiineva-gray-800);
+}
+
+/* Secondary — white + black border */
+.jiineva-btn--secondary {
+  background-color: var(--jiineva-white);
+  border-color: var(--jiineva-black);
+  color: var(--jiineva-black);
+}
+.jiineva-btn--secondary:hover {
+  background-color: var(--jiineva-gray-100);
+}
+
+/* Ghost — transparent, black border, inverts on hover */
+.jiineva-btn--ghost {
+  background-color: transparent;
+  border-color: var(--jiineva-black);
+  color: var(--jiineva-black);
+}
+.jiineva-btn--ghost:hover {
+  background-color: var(--jiineva-black);
+  color: var(--jiineva-white);
+}
+
+/* Inverse — for hero/dark backgrounds */
+.jiineva-btn--inverse {
+  background-color: var(--jiineva-white);
+  border-color: var(--jiineva-white);
+  color: var(--jiineva-black);
+}
+.jiineva-btn--inverse:hover {
+  background-color: transparent;
+  color: var(--jiineva-white);
+}
+
+/* Sizes */
+.jiineva-btn--sm {
+  height: var(--jiineva-btn-h-sm);
+  font-size: var(--jiineva-text-2xs);
+  padding-inline: var(--jiineva-space-4);
+}
+.jiineva-btn--lg {
+  height: var(--jiineva-btn-h-lg);
+  font-size: var(--jiineva-text-sm);
+  padding-inline: var(--jiineva-space-8);
+}
+.jiineva-btn--full {
+  width: 100%;
+}
+
+/* ── ICON BUTTON ─────────────────────────────────────────── */
+
+.jiineva-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--jiineva-transition-fast);
+}
+.jiineva-icon-btn:hover { opacity: 0.55; }
+.jiineva-icon-btn:focus-visible {
+  outline: 2px solid var(--jiineva-border-focus);
+  outline-offset: 2px;
+}
+
+/* ── FORM INPUTS ─────────────────────────────────────────── */
+
+.jiineva-input {
+  display: block;
+  width: 100%;
+  height: var(--jiineva-input-h);
+  padding-inline: var(--jiineva-input-px);
+  font-family: var(--jiineva-font-body);
+  font-size: var(--jiineva-input-size);
+  color: var(--jiineva-text);
+  background-color: var(--jiineva-input-bg);
+  border: 1px solid var(--jiineva-input-border);
+  border-radius: var(--jiineva-radius-input);
+  appearance: none;
+  transition: border-color var(--jiineva-transition-fast);
+}
+.jiineva-input:focus {
+  outline: none;
+  border-color: var(--jiineva-border-focus);
+}
+.jiineva-input::placeholder {
+  color: var(--jiineva-text-muted);
+}
+
+/* ── MEDIA / IMAGE CONTAINERS ────────────────────────────── */
+
+.jiineva-media {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--jiineva-card-bg);
+}
+
+.jiineva-media > img,
+.jiineva-media > video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+/* ── OVERLAY / BACKDROP ──────────────────────────────────── */
+
+.jiineva-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--jiineva-overlay-bg);
+  z-index: var(--jiineva-z-overlay);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--jiineva-transition-base),
+    visibility var(--jiineva-transition-base);
+}
+.jiineva-overlay.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ── DRAWER SHELL ────────────────────────────────────────── */
+
+.jiineva-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--jiineva-drawer-w);
+  max-width: 100vw;
+  background-color: var(--jiineva-bg);
+  z-index: var(--jiineva-z-drawer);
+  transform: translateX(100%);
+  transition: transform var(--jiineva-transition-base);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.jiineva-drawer.is-active {
+  transform: translateX(0);
+}
+
+/* ── LOADING SKELETON ────────────────────────────────────── */
+
+@keyframes jiineva-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.jiineva-skeleton {
+  background-color: var(--jiineva-gray-200);
+  animation: jiineva-pulse 1.5s var(--jiineva-ease) infinite;
+}
+
+/* ── BADGE ───────────────────────────────────────────────── */
+
+.jiineva-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding-inline: var(--jiineva-space-2);
+  font-size: var(--jiineva-text-2xs);
+  font-weight: var(--jiineva-weight-semibold);
+  letter-spacing: var(--jiineva-tracking-wider);
+  text-transform: uppercase;
+  background-color: var(--jiineva-black);
+  color: var(--jiineva-white);
+}
+.jiineva-badge--accent {
+  background-color: var(--jiineva-accent);
+  color: var(--jiineva-white);
+}
+
+/* ── DIVIDER ─────────────────────────────────────────────── */
+
+.jiineva-divider {
+  border: none;
+  border-top: 1px solid var(--jiineva-border);
+  margin: 0;
+}
+
+/* ── ACCESSIBILITY ───────────────────────────────────────── */
+
+.jiineva-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Keyboard-only focus ring (complementary to Dawn's approach) */
+:focus-visible {
+  outline: 2px solid var(--jiineva-border-focus);
+  outline-offset: 3px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── REDUCED MOTION ──────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
