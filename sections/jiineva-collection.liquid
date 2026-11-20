@@ -3050,23 +3050,32 @@ body:has(#jn-mobile-menu.jn-open) .jnc-stickybar {
       if (jncBestOrder) return Promise.resolve(jncBestOrder);
       if (jncBestPromise) return jncBestPromise;
       var base = {{ collection.url | json }} || window.location.pathname;
-      var url  = base + '?sort_by=best-selling&section_id=' + encodeURIComponent({{ section.id | json }});
-      jncBestPromise = fetch(url, { headers: { 'Accept': 'text/html' } })
-        .then(function(r) { if (!r.ok) throw new Error('status ' + r.status); return r.text(); })
-        .then(function(html) {
-          var doc = new DOMParser().parseFromString(html, 'text/html');
-          var cards = doc.querySelectorAll('.jn-product-card[data-handle]');
-          var order = {};
-          for (var i = 0; i < cards.length; i++) {
-            var h = cards[i].getAttribute('data-handle');
-            if (h && order[h] === undefined) order[h] = i;
-          }
+      var secId = encodeURIComponent({{ section.id | json }});
+      var order = {}, seen = 0;
+      /* Walks every page of the best-selling order (50 products each), so
+         products beyond the first page are ranked too, not left to tie. */
+      function loadBestPage(n) {
+        var url = base + '?sort_by=best-selling&page=' + n + '&section_id=' + secId;
+        return fetch(url, { headers: { 'Accept': 'text/html' } })
+          .then(function(r) { if (!r.ok) throw new Error('status ' + r.status); return r.text(); })
+          .then(function(html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var cards = doc.querySelectorAll('.jn-product-card[data-handle]');
+            for (var i = 0; i < cards.length; i++) {
+              var h = cards[i].getAttribute('data-handle');
+              if (h && order[h] === undefined) { order[h] = seen; seen++; }
+            }
+            if (cards.length && n < 40 && doc.querySelector('.jnc-load-more')) return loadBestPage(n + 1);
+          });
+      }
+      jncBestPromise = loadBestPage(1)
+        .then(function() {
           jncBestOrder = order;
           return order;
         })
         .catch(function(err) {
           console.warn('[JIINEVA] best-selling order unavailable; keeping current order', err);
-          jncBestOrder = {};
+          jncBestOrder = order;
           return jncBestOrder;
         });
       return jncBestPromise;
@@ -3355,7 +3364,7 @@ body:has(#jn-mobile-menu.jn-open) .jnc-stickybar {
         if (st === jncState) { jncRender(); jncSyncUrl(); }
       });
     });
-    jncColorOpts.forEach(function(b) {
+    function jncBindColorOpt(b) {
       b.addEventListener('click', function() {
         if (b.disabled) return;
         var v  = (b.getAttribute('data-color') || '').toLowerCase();
@@ -3365,7 +3374,8 @@ body:has(#jn-mobile-menu.jn-open) .jnc-stickybar {
         jncSyncOptionUi();
         if (st === jncState) { jncRender(); jncSyncUrl(); }
       });
-    });
+    }
+    jncColorOpts.forEach(jncBindColorOpt);
     function jncClearAll() {
       var st = jncLive();
       st.colors = [];
@@ -3441,17 +3451,133 @@ body:has(#jn-mobile-menu.jn-open) .jnc-stickybar {
       sync();
     });
 
-    /* LOAD MORE keeps the filter. Built from the href the server rendered,
-       stored once, so repeated clicks can never stack parameters. */
+    /* LOAD MORE — adds the next page of products BELOW the ones already on
+       screen instead of navigating to a new page. The next page is fetched in
+       the background (this section only), its product cards are added to the
+       same list the filter / sort engine already works from, and everything
+       is re-rendered in one go, so an active colour filter or sort carries
+       onto the new products automatically. If anything at all goes wrong
+       before the grid is touched, it falls back to the old behaviour: a normal
+       trip to the next page, with the active filter passed along. */
     if (jncLoadMore) {
-      var jncLoadMoreHref = jncLoadMore.getAttribute('href') || '';
-      jncLoadMore.addEventListener('click', function() {
-        if (!jncLoadMoreHref) return;
-        var u = jncLoadMoreHref.split('#')[0];
+      var jncNextHref     = jncLoadMore.getAttribute('href') || '';
+      var jncLoadMoreText = jncLoadMore.textContent;
+      var jncLoadingMore  = false;
+
+      function jncCleanHref(h) {
+        try {
+          var u = new URL(h, window.location.origin);
+          u.searchParams.delete('section_id');
+          return u.pathname + u.search;
+        } catch (err) { return h; }
+      }
+      function jncNavigateNext() {
+        var u = (jncNextHref || '').split('#')[0];
+        if (!u) return;
         var extra = [];
         if (jncState.colors.length) extra.push('color=' + encodeURIComponent(jncState.colors.join(',')));
         if (jncState.sort !== 'popular') extra.push('sort=' + encodeURIComponent(jncState.sort));
-        if (extra.length) jncLoadMore.setAttribute('href', u + (u.indexOf('?') === -1 ? '?' : '&') + extra.join('&'));
+        window.location.assign(extra.length ? u + (u.indexOf('?') === -1 ? '?' : '&') + extra.join('&') : u);
+      }
+      /* A colour that only exists on a later page gets its own option in the
+         COLOUR list, so it can be filtered like any other. */
+      function jncAddColorOptions(newCards) {
+        var inner = jncPanel ? jncPanel.querySelector('#jnc-fbody-color .jnc-fsection-body-inner') : null;
+        if (!inner) return;
+        var have = {};
+        jncColorOpts.forEach(function(b) { have[(b.getAttribute('data-color') || '').toLowerCase()] = 1; });
+        var added = false;
+        newCards.forEach(function(card) {
+          (card.getAttribute('data-colors') || '').split('|').forEach(function(raw) {
+            var name = jncTrim(raw), key = name.toLowerCase();
+            if (!name || have[key]) return;
+            have[key] = 1;
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'jnc-fopt';
+            btn.setAttribute('data-color', name);
+            btn.setAttribute('aria-pressed', 'false');
+            var sw = document.createElement('span');
+            sw.className = 'jnc-fswatch';
+            sw.setAttribute('aria-hidden', 'true');
+            btn.appendChild(sw);
+            btn.appendChild(document.createTextNode(name.toUpperCase()));
+            inner.appendChild(btn);
+            jncColorOpts.push(btn);
+            jncBindColorOpt(btn);
+            added = true;
+          });
+        });
+        if (added) jncPaintSwatches();
+      }
+      function jncLoadMoreDone() {
+        jncLoadingMore = false;
+        jncLoadMore.removeAttribute('aria-busy');
+        jncLoadMore.textContent = jncLoadMoreText;
+      }
+
+      jncLoadMore.addEventListener('click', function(e) {
+        /* New-tab / modified clicks keep their normal link behaviour. */
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        if (!jncNextHref || !window.fetch || !window.DOMParser || !window.URL) { jncNavigateNext(); e.preventDefault(); return; }
+        e.preventDefault();
+        if (jncLoadingMore) return;
+        jncLoadingMore = true;
+        jncLoadMore.setAttribute('aria-busy', 'true');
+        jncLoadMore.textContent = 'LOADING\u2026';
+
+        var url = jncNextHref + (jncNextHref.indexOf('?') === -1 ? '?' : '&') + 'section_id=' + encodeURIComponent({{ section.id | json }});
+        var touched = false;
+        fetch(url, { headers: { 'Accept': 'text/html' } })
+          .then(function(r) { if (!r.ok) throw new Error('status ' + r.status); return r.text(); })
+          .then(function(html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var fetched = [].slice.call(doc.querySelectorAll('#jnc-grid .jn-product-card'));
+            var have = {};
+            jncCards.forEach(function(c) { have[c.getAttribute('data-handle')] = 1; });
+            var fresh = [];
+            fetched.forEach(function(c) {
+              var h = c.getAttribute('data-handle');
+              if (h && have[h]) return;
+              if (h) have[h] = 1;
+              fresh.push(document.importNode(c, true));
+            });
+            if (!fetched.length) throw new Error('no products in response');
+
+            /* Past this point the grid is changed, so no more fallback navigation. */
+            touched = true;
+            fresh.forEach(function(node) {
+              [].slice.call(node.querySelectorAll('img')).forEach(function(img) {
+                img.setAttribute('loading', 'lazy');
+                img.removeAttribute('fetchpriority');
+              });
+              node.setAttribute('data-i', jncCards.length);
+              jncCards.push(node);
+            });
+            jncAddColorOptions(fresh);
+
+            var nextLink = doc.getElementById('jnc-load-more');
+            var info = doc.querySelector('.jnc-pagination-info');
+            if (info && jncPagInfo) jncPagInfo.textContent = info.textContent.replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+            if (nextLink && nextLink.getAttribute('href')) {
+              jncNextHref = jncCleanHref(nextLink.getAttribute('href'));
+              jncLoadMore.setAttribute('href', jncNextHref);
+            } else {
+              jncNextHref = '';
+              jncLoadMore.style.display = 'none';
+            }
+
+            jncRender();
+            jncSyncOptionUi();
+            if (window.jnpBadgeRotatorRun) window.jnpBadgeRotatorRun(jncGrid);
+            if (jncState.sort === 'best') jncEnsureBest().then(function() { if (jncState.sort === 'best') jncRender(); });
+          })
+          .catch(function(err) {
+            console.warn('[JIINEVA] load more failed', err);
+            jncLoadMoreDone();
+            if (!touched) jncNavigateNext();
+          })
+          .then(function() { if (jncLoadingMore) jncLoadMoreDone(); });
       });
     }
 
