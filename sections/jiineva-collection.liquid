@@ -2208,6 +2208,9 @@ body:has(#jn-mobile-menu.jn-open) .jnc-stickybar {
       the root cause of the grey fallback showing on some pages.
     {%- endcomment -%}
     {%- assign jnc_prod_count = 0 -%}
+    {%- comment -%} INR keeps the original ₹ formatting exactly; any other currency uses Shopify's own money format. {%- endcomment -%}
+    {%- assign jn_is_inr = false -%}
+    {%- if cart.currency.iso_code == 'INR' or cart.currency.iso_code == blank -%}{%- assign jn_is_inr = true -%}{%- endif -%}
     {%- for product in collection.products -%}
       {%- if forloop.first -%}{%- assign jnc_prod_count = forloop.length -%}{%- endif -%}
       {%- comment -%} 30-day NEW badge detection {%- endcomment -%}
@@ -2431,8 +2434,8 @@ body:has(#jn-mobile-menu.jn-open) .jnc-stickybar {
               {%- assign jn_head_pct = jn_head_compare | minus: jn_head_price | times: 100.0 | divided_by: jn_head_compare | round -%}
             {%- endif -%}
             <div class="jn-product-price-row">
-              <span class="jn-product-compare-price"{% unless jn_head_compare > jn_head_price %} hidden{% endunless %}>{{ jn_head_compare | money | remove: 'Rs.' | remove: 'INR' | strip | replace: '.00', '' | prepend: '₹' }}</span>
-              <span class="jn-product-price">{{ jn_head_price | money | remove: 'Rs.' | remove: 'INR' | strip | replace: '.00', '' | prepend: '₹' }}</span>
+              <span class="jn-product-compare-price"{% unless jn_head_compare > jn_head_price %} hidden{% endunless %}>{% if jn_is_inr %}{{ jn_head_compare | money | remove: 'Rs.' | remove: 'INR' | strip | replace: '.00', '' | prepend: '₹' }}{% else %}{{ jn_head_compare | money_without_trailing_zeros }}{% endif %}</span>
+              <span class="jn-product-price">{% if jn_is_inr %}{{ jn_head_price | money | remove: 'Rs.' | remove: 'INR' | strip | replace: '.00', '' | prepend: '₹' }}{% else %}{{ jn_head_price | money_without_trailing_zeros }}{% endif %}</span>
               <span class="jn-product-discount-badge"{% unless jn_head_compare > jn_head_price and jn_head_pct > 0 %} hidden{% endunless %}>{{ jn_head_pct }}% OFF</span>
             </div>
             {%- comment -%}
@@ -3649,6 +3652,20 @@ body:has(#jn-mobile-menu.jn-open) .jnc-stickybar {
      single-variant path below and the quick-add size sheet. Never touches
      .textContent on a caller's button (original bug: wipes the SVG icon
      since these buttons have no text nodes) — only toggles .is-adding. ── */
+  /* Price display from Shopify minor units. INR keeps the original "₹1,499"
+     format exactly; any other active currency (Shopify Markets) gets its own
+     symbol via Intl, so ₹ and $ can never appear together. */
+  function jncMoney(minor) {
+    var code = (window.Shopify && Shopify.currency && Shopify.currency.active) || 'INR';
+    if (code === 'INR') return '₹' + Math.floor(minor / 100).toLocaleString('en-IN');
+    try {
+      return new Intl.NumberFormat(document.documentElement.lang || undefined, {
+        style: 'currency', currency: code,
+        minimumFractionDigits: (minor % 100 === 0) ? 0 : 2, maximumFractionDigits: (minor % 100 === 0) ? 0 : 2
+      }).format(minor / 100);
+    } catch (e) { return code + ' ' + (minor / 100); }
+  }
+
   function addVariantToCart(variantId, btn) {
     if (btn) btn.classList.add('is-adding');
     return fetch('/cart/add.js', {
@@ -3990,7 +4007,7 @@ body:has(#jn-mobile-menu.jn-open) .jnc-stickybar {
                  API), so divide by 100 before formatting. Compare price is
                  shown struck-through alongside when it's higher. ── */
               if (qaPrice) {
-                var inr = function(n) { return '₹' + Math.floor(n / 100).toLocaleString('en-IN'); };
+                var inr = jncMoney;
                 var picked = resolveVariant() || match;
                 var txt = inr(picked.price);
                 if (picked.compare_at_price && picked.compare_at_price > picked.price) {
@@ -4107,7 +4124,7 @@ body:has(#jn-mobile-menu.jn-open) .jnc-stickybar {
         var priceEl = card.querySelector('.jn-product-price');
         var compareEl = card.querySelector('.jn-product-compare-price');
         var discountEl = card.querySelector('.jn-product-discount-badge');
-        var inr = function(p) { return '₹' + Math.floor(p / 100).toLocaleString('en-IN'); };
+        var inr = jncMoney;
         if (priceEl) priceEl.textContent = inr(price);
         if (compare > price) {
           if (compareEl) { compareEl.textContent = inr(compare); compareEl.hidden = false; }
